@@ -1,0 +1,16 @@
+    {
+      "taals": [
+        {
+          "name": "Teen Taal",
+          "matras": ["Dha", "Dhin", "Dhin", "Dha", "Dha", "Dhin", "Dhin", "Dha", "Dha", "Tin", "Tin", "Ta", "Ta", "Dhin", "Dhin", "Dha"],
+          "columns": 4,
+          "guuns": [1, 2, 4, 8]
+        },
+        {
+          "name": "Rupak Taal",
+          "matras": ["Tin", "Tin", "Na", "Dhin", "Na", "Dhin", "Na"],
+          "columns": 3,
+          "guuns": [1, 2, 4]
+        }
+      ]
+    }
