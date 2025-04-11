@@ -73,6 +73,7 @@ flutter:
     - assets/sound/dha.mp3
     - assets/sound/dhin.mp3
     - assets/sound/tin.mp3
+    - assets/sound/naa.mp3
     - assets/sound/ta.mp3
     - assets/sound/tanpura.mp3
     - assets/json/taals.json

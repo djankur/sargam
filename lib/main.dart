@@ -7,20 +7,74 @@ import 'package:just_audio/just_audio.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 void main() {
-  runApp(MaterialApp(
-    home: NotesLyricsScreen(),
-    theme: ThemeData.dark().copyWith(
+  runApp(MyApp());
+}
+
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _isDarkMode = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Sargam',
+      theme: _isDarkMode ? _buildDarkTheme() : _buildLightTheme(),
+      home: NotesLyricsScreen(
+        isDarkMode: _isDarkMode,
+        onThemeChanged: (value) {
+          setState(() {
+            _isDarkMode = value;
+          });
+        },
+      ),
+    );
+  }
+
+  ThemeData _buildDarkTheme() {
+    return ThemeData.dark().copyWith(
       colorScheme: ColorScheme.dark(
         primary: Colors.amber,
         secondary: Colors.amber.shade200,
         surface: Colors.grey.shade800,
         background: Colors.grey[900],
       ),
-    ),
-  ));
+      textTheme: GoogleFonts.latoTextTheme(ThemeData.dark().textTheme),
+    );
+  }
+
+  ThemeData _buildLightTheme() {
+    return ThemeData.light().copyWith(
+      colorScheme: ColorScheme.light(
+        primary: Colors.amber,
+        secondary: Colors.amber.shade700,
+        surface: Colors.grey.shade100,
+        background: Colors.grey[50],
+      ),
+      textTheme: GoogleFonts.latoTextTheme(ThemeData.light().textTheme),
+      cardTheme: CardTheme(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
 }
 
 class NotesLyricsScreen extends StatefulWidget {
+  final bool isDarkMode;
+  final ValueChanged<bool> onThemeChanged;
+
+  const NotesLyricsScreen({
+    Key? key,
+    required this.isDarkMode,
+    required this.onThemeChanged,
+  }) : super(key: key);
+
   @override
   _NotesLyricsScreenState createState() => _NotesLyricsScreenState();
 }
@@ -123,17 +177,38 @@ class _NotesLyricsScreenState extends State<NotesLyricsScreen> {
     }
   }
 
+  // Future<void> startTabla() async {
+  //   if (_isPlaying || _selectedTaal == null) return;
+  //   setState(() => _isPlaying = true);
+  //
+  //   int delay = (60000 ~/ (bpm * _selectedGuun));
+  //
+  //   for (int i = 0; i < _selectedTaal!.matras.length; i++) {
+  //     if (!_isPlaying) break;
+  //     setState(() => _currentMatraIndex = i);
+  //     await playTablaBol(_selectedTaal!.matras[i].toLowerCase());
+  //     await Future.delayed(Duration(milliseconds: delay));
+  //   }
+  //
+  //   setState(() {
+  //     _isPlaying = false;
+  //     _currentMatraIndex = -1;
+  //   });
+  // }
+
   Future<void> startTabla() async {
     if (_isPlaying || _selectedTaal == null) return;
     setState(() => _isPlaying = true);
 
     int delay = (60000 ~/ (bpm * _selectedGuun));
 
-    for (int i = 0; i < _selectedTaal!.matras.length; i++) {
-      if (!_isPlaying) break;
-      setState(() => _currentMatraIndex = i);
-      await playTablaBol(_selectedTaal!.matras[i].toLowerCase());
-      await Future.delayed(Duration(milliseconds: delay));
+    while (_isPlaying) {  // Keep playing as long as _isPlaying is true
+      for (int i = 0; i < _selectedTaal!.matras.length; i++) {
+        if (!_isPlaying) break;
+        setState(() => _currentMatraIndex = i);
+        await playTablaBol(_selectedTaal!.matras[i].toLowerCase());
+        await Future.delayed(Duration(milliseconds: delay));
+      }
     }
 
     setState(() {
@@ -171,13 +246,13 @@ class _NotesLyricsScreenState extends State<NotesLyricsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Recording started'),
             ));
-        }
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Recording failed: $e')),
-          );
-        }
       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Recording failed: $e')),
+      );
+    }
+  }
 
   Future<void> _stopRecording() async {
     await _recorder.stop();
@@ -214,24 +289,28 @@ class _NotesLyricsScreenState extends State<NotesLyricsScreen> {
 
   Widget _buildTaalDropdown() {
     return DropdownButtonFormField<Taal>(
-        value: _selectedTaal,
-        decoration: InputDecoration(
+      value: _selectedTaal,
+      decoration: InputDecoration(
         filled: true,
-        fillColor: Colors.grey[800],
+        fillColor: widget.isDarkMode ? Colors.grey[800] : Colors.grey[200],
         border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-    borderSide: BorderSide.none,
-    ),
-    contentPadding: EdgeInsets.symmetric(horizontal: 12),
-    ),
-    dropdownColor: Colors.grey[850],
-    style: TextStyle(color: Colors.white),
-    onChanged: (newTaal) => setState(() {
-    _selectedTaal = newTaal;
-    _selectedGuun = _selectedTaal!.guuns.first;
-    _initializeCycles();
-    }),
-    items: _taals.map((taal) => DropdownMenuItem(value: taal, child: Text(taal.name))).toList(),);
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12),
+      ),
+      dropdownColor: widget.isDarkMode ? Colors.grey[850] : Colors.grey[100],
+      style: TextStyle(color: widget.isDarkMode ? Colors.white : Colors.black),
+      onChanged: (newTaal) => setState(() {
+        _selectedTaal = newTaal;
+        _selectedGuun = _selectedTaal!.guuns.first;
+        _initializeCycles();
+      }),
+      items: _taals.map((taal) => DropdownMenuItem(
+        value: taal,
+        child: Text(taal.name),
+      )).toList(),
+    );
   }
 
   Widget _buildGuunDropdown() {
@@ -239,19 +318,19 @@ class _NotesLyricsScreenState extends State<NotesLyricsScreen> {
       value: _selectedGuun,
       decoration: InputDecoration(
         filled: true,
-        fillColor: Colors.grey[800],
+        fillColor: widget.isDarkMode ? Colors.grey[800] : Colors.grey[200],
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide.none,
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 12),
       ),
-      dropdownColor: Colors.grey[850],
-      style: TextStyle(color: Colors.white),
+      dropdownColor: widget.isDarkMode ? Colors.grey[850] : Colors.grey[100],
+      style: TextStyle(color: widget.isDarkMode ? Colors.white : Colors.black),
       onChanged: (newGuun) => setState(() => _selectedGuun = newGuun!),
       items: _selectedTaal?.guuns.map((guun) => DropdownMenuItem(
         value: guun,
-        child: Text('$guun', style: TextStyle(color: Colors.white)),
+        child: Text('$guun'),
       )).toList() ?? [],
     );
   }
@@ -286,40 +365,43 @@ class _NotesLyricsScreenState extends State<NotesLyricsScreen> {
       elevation: 2,
       color: _currentMatraIndex == index
           ? Colors.amber.withOpacity(0.2)
-          : Colors.grey[800],
+          : widget.isDarkMode ? Colors.grey[800] : Colors.grey[100],
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
         side: BorderSide(
           color: _currentMatraIndex == index
               ? Colors.amber
-              : Colors.grey.shade700,
+              : widget.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
           width: 1,
         ),
       ),
       child: Container(
         padding: EdgeInsets.all(8),
-        constraints: BoxConstraints(minHeight: 120), // Set minimum height
+        constraints: BoxConstraints(minHeight: 120),
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Use minimum space needed
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(matras[index], style: TextStyle(
               color: _currentMatraIndex == index
                   ? Colors.amber
-                  : Colors.white,
+                  : widget.isDarkMode ? Colors.white : Colors.black,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             )),
-            SizedBox(height: 4), // Reduced spacing
-            Flexible( // Make text fields flexible
+            SizedBox(height: 4),
+            Flexible(
               child: TextField(
                 controller: _swarganControllers[index ~/ _selectedTaal!.columns][index % _selectedTaal!.columns],
                 onChanged: (value) => notes[index] = value,
-                style: TextStyle(color: Colors.white, fontSize: 14), // Smaller font
+                style: TextStyle(
+                  color: widget.isDarkMode ? Colors.white : Colors.black,
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
-                  isDense: true, // Reduce padding
+                  isDense: true,
                   filled: true,
-                  fillColor: Colors.grey[700],
+                  fillColor: widget.isDarkMode ? Colors.grey[700] : Colors.grey[300],
                   hintText: "Swar",
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(4),
@@ -329,16 +411,19 @@ class _NotesLyricsScreenState extends State<NotesLyricsScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 4), // Reduced spacing
-            Flexible( // Make text fields flexible
+            SizedBox(height: 4),
+            Flexible(
               child: TextField(
                 controller: _lyricsControllers[index ~/ _selectedTaal!.columns][index % _selectedTaal!.columns],
                 onChanged: (value) => lyrics[index] = value,
-                style: TextStyle(color: Colors.white, fontSize: 14), // Smaller font
+                style: TextStyle(
+                  color: widget.isDarkMode ? Colors.white : Colors.black,
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
-                  isDense: true, // Reduce padding
+                  isDense: true,
                   filled: true,
-                  fillColor: Colors.grey[700],
+                  fillColor: widget.isDarkMode ? Colors.grey[700] : Colors.grey[300],
                   hintText: "Lyrics",
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(4),
@@ -359,7 +444,7 @@ class _NotesLyricsScreenState extends State<NotesLyricsScreen> {
 
     return Card(
       elevation: 4,
-      color: Colors.grey[850],
+      color: widget.isDarkMode ? Colors.grey[850] : Colors.grey[50],
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.amber.withOpacity(0.3)),
@@ -374,7 +459,7 @@ class _NotesLyricsScreenState extends State<NotesLyricsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text("Cycle ${cycleIndex + 1}", style: GoogleFonts.lato(
-                  color: Colors.amber[200],
+                  color: Colors.amber[700],
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 )),
@@ -392,14 +477,14 @@ class _NotesLyricsScreenState extends State<NotesLyricsScreen> {
                 ),
               ],
             ),
-            Divider(color: Colors.grey[700]),
+            Divider(color: widget.isDarkMode ? Colors.grey[700] : Colors.grey[300]),
             SizedBox(height: 8),
             GridView.builder(
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: _selectedTaal!.columns,
-                childAspectRatio: 0.8, // Reduced from 1.2 to give more width
+                childAspectRatio: 0.8,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
               ),
@@ -415,7 +500,7 @@ class _NotesLyricsScreenState extends State<NotesLyricsScreen> {
   Widget _buildControlsCard() {
     return Card(
       elevation: 4,
-      color: Colors.grey[850],
+      color: widget.isDarkMode ? Colors.grey[850] : Colors.grey[50],
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -424,11 +509,11 @@ class _NotesLyricsScreenState extends State<NotesLyricsScreen> {
         child: Column(
           children: [
             Text("Controls", style: GoogleFonts.lato(
-              color: Colors.amber[200],
+              color: Colors.amber[700],
               fontSize: 18,
               fontWeight: FontWeight.bold,
             )),
-            Divider(color: Colors.grey[700]),
+            Divider(color: widget.isDarkMode ? Colors.grey[700] : Colors.grey[300]),
             SizedBox(height: 12),
             Wrap(
               spacing: 12,
@@ -482,96 +567,103 @@ class _NotesLyricsScreenState extends State<NotesLyricsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[900],
-      appBar: AppBar(
-        title: Text('Taal Composer', style: GoogleFonts.lato(
-          fontSize: 22,
-          fontWeight: FontWeight.w500,
-          color: Colors.amber[200],
-        )),
-        backgroundColor: Colors.grey[850],
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: IconThemeData(color: Colors.amber[200]),
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Taal selection card
-            Card(
-              elevation: 4,
-              color: Colors.grey[850],
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.amber.withOpacity(0.3)),
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Text('Select Taal', style: GoogleFonts.lato(
-                      color: Colors.amber[200],
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    )),
-                    SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(child: _buildTaalDropdown()),
-                        SizedBox(width: 16),
-                        Expanded(child: _buildGuunDropdown()),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+        backgroundColor: widget.isDarkMode ? Colors.grey[900] : Colors.grey[50],
+        appBar: AppBar(
+          title: Text('Sargam', style: GoogleFonts.lato(
+            fontSize: 22,
+            fontWeight: FontWeight.w500,
+            color: Colors.amber[700],
+          )),
+          backgroundColor: widget.isDarkMode ? Colors.grey[850] : Colors.grey[100],
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: IconThemeData(color: Colors.amber[700]),
+          actions: [
+            IconButton(
+              icon: Icon(widget.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+              onPressed: () {
+                widget.onThemeChanged(!widget.isDarkMode);
+              },
             ),
-            SizedBox(height: 24),
-
-            // BPM control
-            Card(
-              elevation: 4,
-              color: Colors.grey[850],
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Text('Tempo (BPM)', style: GoogleFonts.lato(
-                      color: Colors.amber[200],
-                      fontSize: 18,
-                    )),
-                    Slider(
-                      min: 60,
-                      max: 240,
-                      divisions: 18,
-                      label: '$bpm BPM',
-                      value: bpm.toDouble(),
-                      activeColor: Colors.amber,
-                      inactiveColor: Colors.grey[700],
-                      onChanged: (value) => setState(() => bpm = value.round()),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: 24),
-
-            // Cycles
-            Text('Composition', style: GoogleFonts.lato(
-              color: Colors.amber[200],
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            )),
-            SizedBox(height: 12),
-            ...List.generate(cycles.length, (index) => _buildCycleCard(index)),
-
-            // Controls
-            SizedBox(height: 24),
-            _buildControlsCard(),
           ],
         ),
-      ),
+        body: SingleChildScrollView(
+            padding: EdgeInsets.all(16),
+            child: Column(
+                children: [
+                // Taal selection card
+                Card(
+                elevation: 4,
+                color: widget.isDarkMode ? Colors.grey[850] : Colors.grey[50],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.amber.withOpacity(0.3)),),
+                child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Text('Select Taal', style: GoogleFonts.lato(
+                          color: Colors.amber[700],
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        )),
+                        SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(child: _buildTaalDropdown()),
+                            SizedBox(width: 16),
+                            Expanded(child: _buildGuunDropdown()),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 24),
+
+                // BPM control
+                Card(
+                  elevation: 4,
+                  color: widget.isDarkMode ? Colors.grey[850] : Colors.grey[50],
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Text('Tempo (BPM)', style: GoogleFonts.lato(
+                          color: Colors.amber[700],
+                          fontSize: 18,
+                        )),
+                        Slider(
+                          min: 60,
+                          max: 240,
+                          divisions: 18,
+                          label: '$bpm BPM',
+                          value: bpm.toDouble(),
+                          activeColor: Colors.amber,
+                          inactiveColor: widget.isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                          onChanged: (value) => setState(() => bpm = value.round()),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 24),
+
+                // Cycles
+                Text('Composition', style: GoogleFonts.lato(
+                  color: Colors.amber[700],
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                )),
+                SizedBox(height: 12),
+                ...List.generate(cycles.length, (index) => _buildCycleCard(index)),
+
+    // Controls
+    SizedBox(height: 24),
+    _buildControlsCard(),
+    ],
+    ),
+    ),
     );
-  }
+    }
 }
